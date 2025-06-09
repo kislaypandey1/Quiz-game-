@@ -4,8 +4,6 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Gimble Gamble</title>
-  <!-- Tone.js for dynamic sound effects -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.min.js"></script>
   <style>
     body {
       font-family: "Segoe UI", sans-serif;
@@ -14,11 +12,11 @@
       display: flex;
       justify-content: center;
       align-items: center;
-      min-height: 100vh; /* Use min-height for better mobile adaptability */
+      min-height: 100vh;
       margin: 0;
-      padding: 15px; /* Add padding for small screens */
-      box-sizing: border-box; /* Include padding in element's total width and height */
-      overflow-y: auto; /* Allow vertical scrolling if content is too tall */
+      padding: 15px;
+      box-sizing: border-box;
+      overflow-y: auto;
     }
     .quiz-box {
       background: rgba(0, 0, 0, 0.75);
@@ -28,7 +26,7 @@
       width: 90%;
       max-width: 450px;
       text-align: center;
-      position: relative; /* For timer positioning */
+      position: relative;
     }
     h2 {
       margin-bottom: 1rem;
@@ -51,7 +49,7 @@
       background: linear-gradient(to right, #00c6ff, #0072ff);
       color: white;
       font-weight: bold;
-      border: 2px solid transparent; /* For hover effect */
+      border: 2px solid transparent;
     }
     button:hover, select:hover {
       transform: scale(1.03);
@@ -59,11 +57,11 @@
     .question {
       font-size: 1.3rem;
       margin-bottom: 1rem;
-      min-height: 60px; /* Ensure space for question text */
+      min-height: 60px;
       display: flex;
       align-items: center;
       justify-content: center;
-      word-wrap: break-word; /* Ensure long words wrap */
+      word-wrap: break-word;
       overflow-wrap: break-word;
     }
     .options {
@@ -79,21 +77,21 @@
       border-radius: 10px;
       cursor: pointer;
       transition: background 0.3s ease, transform 0.1s ease;
-      border: 1px solid #2c3e50; /* Add a subtle border */
-      word-wrap: break-word; /* Ensure long words wrap */
+      border: 1px solid #2c3e50;
+      word-wrap: break-word;
       overflow-wrap: break-word;
       text-align: center;
     }
     .option:hover {
       background: #34495e;
-      border-color: #f1c40f; /* Highlight border on hover */
+      border-color: #f1c40f;
     }
     .option.correct {
-      background: #27ae60; /* Green for correct answer */
+      background: #27ae60;
       border-color: #27ae60;
     }
     .option.incorrect {
-      background: #e74c3c; /* Red for incorrect answer */
+      background: #e74c3c;
       border-color: #e74c3c;
     }
     .score, .result {
@@ -107,39 +105,66 @@
       font-size: 1.8rem;
       font-weight: bold;
       margin-bottom: 1.5rem;
-      color: #f1c40f; /* Gold-like color for timer */
+      color: #f1c40f;
       text-shadow: 0 0 8px rgba(241, 196, 15, 0.6);
-      display: none; /* Hidden by default */
+      display: none;
     }
     .result {
       font-size: 1.8rem;
-      color: #2ecc71; /* Green for success */
+      color: #2ecc71;
     }
     .restart {
         margin-top: 1.5rem;
     }
-    /* Message box styles */
     .message-box {
-        background-color: #38b2ac; /* Teal */
+        background-color: #38b2ac;
         color: #e2e8f0;
         padding: 15px;
         border-radius: 8px;
         margin-top: 20px;
-        display: none; /* Hidden by default */
+        display: none;
         font-size: 1rem;
         font-weight: 500;
         word-wrap: break-word;
     }
     .message-box.error {
-        background-color: #e53e3e; /* Red for error */
+        background-color: #e53e3e;
     }
     .message-box.success {
-        background-color: #48bb78; /* Green for success */
+        background-color: #48bb78;
+    }
+    .sound-control {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      z-index: 10;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+    }
+    .sound-control i {
+      font-size: 20px;
+    }
+    .sound-control.muted {
+      background: rgba(231, 76, 60, 0.5);
     }
   </style>
+  <!-- Font Awesome for sound icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
   <div class="quiz-box" id="quiz">
+    <!-- Sound control button -->
+    <div class="sound-control" id="soundControl" title="Toggle sound">
+      <i class="fas fa-volume-up"></i>
+    </div>
+    
     <div id="setup">
       <h2>🎯 Choose Topic & Difficulty</h2>
       <select id="topicSelect">
@@ -160,15 +185,23 @@
     <div class="question" id="question" style="display:none"></div>
     <div class="options" id="options" style="display:none"></div>
     <div class="score" id="score" style="display:none"></div>
-    <!-- Message box for displaying feedback -->
     <div id="messageBox" class="message-box"></div>
   </div>
 
-  <!-- Sound Effects -->
-  <audio id="correctSound" src="https://www.soundjay.com/buttons/sounds/button-3.mp3"></audio>
-  <audio id="wrongSound" src="https://www.soundjay.com/buttons/sounds/button-10.mp3"></audio>
-
   <script>
+    // Sound objects - fixed approach
+    const correctSound = new Audio("https://www.soundjay.com/buttons/sounds/button-3.mp3");
+    const wrongSound = new Audio("https://www.soundjay.com/buttons/sounds/button-10.mp3");
+    const timerEndSound = new Audio("https://www.soundjay.com/buttons/sounds/button-09.mp3");
+    
+    // Preload sounds
+    correctSound.preload = 'auto';
+    wrongSound.preload = 'auto';
+    timerEndSound.preload = 'auto';
+    
+    // Sound state management
+    let soundEnabled = true;
+
     const allQuestions = {
       general: {
         easy: [
@@ -259,34 +292,53 @@
     const optionsEl = document.getElementById("options");
     const scoreEl = document.getElementById("score");
     const timerEl = document.getElementById("timer");
-    const messageBox = document.getElementById("messageBox"); // Reference to the message box
-    const correctSound = document.getElementById("correctSound");
-    const wrongSound = document.getElementById("wrongSound");
+    const messageBox = document.getElementById("messageBox");
+    const soundControl = document.getElementById("soundControl");
 
-    // Function to display messages in the message box
-    function showMessage(message, type = 'info') {
-        messageBox.textContent = message;
-        messageBox.className = 'message-box'; // Reset classes
-        if (type === 'error') {
-            messageBox.classList.add('error');
-        } else if (type === 'success') {
-            messageBox.classList.add('success');
-        }
-        messageBox.style.display = 'block';
-        setTimeout(() => {
-            messageBox.style.display = 'none';
-        }, 3000); // Hide after 3 seconds
+    // Function to play a sound
+    function playSound(sound) {
+      if (!soundEnabled) return;
+      
+      try {
+        // Stop and reset before playing
+        sound.pause();
+        sound.currentTime = 0;
+        sound.play().catch(error => {
+          console.log("Sound playback error:", error);
+          showMessage("Sound playback blocked. Please interact with the page first.", "error");
+        });
+      } catch (error) {
+        console.log("Sound error:", error);
+      }
     }
 
-    // Function to play a sound when the timer finishes for a question
-    function playTimerEndSound() {
-        try {
-            // Using Tone.js for a more distinct short beep
-            const synth = new Tone.Synth().toDestination();
-            synth.triggerAttackRelease("D3", "8n"); // Play D3 for an 8th note
-        } catch (error) {
-            console.error("Error playing timer end sound:", error);
-        }
+    // Toggle sound
+    soundControl.addEventListener("click", () => {
+      soundEnabled = !soundEnabled;
+      if (soundEnabled) {
+        soundControl.classList.remove("muted");
+        soundControl.innerHTML = '<i class="fas fa-volume-up"></i>';
+        showMessage("Sound enabled", "success");
+      } else {
+        soundControl.classList.add("muted");
+        soundControl.innerHTML = '<i class="fas fa-volume-mute"></i>';
+        showMessage("Sound disabled", "error");
+      }
+    });
+
+    // Function to display messages
+    function showMessage(message, type = 'info') {
+      messageBox.textContent = message;
+      messageBox.className = 'message-box';
+      if (type === 'error') {
+        messageBox.classList.add('error');
+      } else if (type === 'success') {
+        messageBox.classList.add('success');
+      }
+      messageBox.style.display = 'block';
+      setTimeout(() => {
+        messageBox.style.display = 'none';
+      }, 3000);
     }
 
     function startQuiz() {
@@ -295,22 +347,21 @@
       selectedQuestions = allQuestions[topic][difficulty];
 
       if (!selectedQuestions || selectedQuestions.length === 0) {
-        // Display message using the messageBox
         showMessage("No questions available for this topic and difficulty. Please choose another combination.", "error");
-        setupDiv.style.display = "block"; // Keep setup visible
+        setupDiv.style.display = "block";
         questionEl.style.display = "none";
         optionsEl.style.display = "none";
         scoreEl.style.display = "none";
-        timerEl.style.display = "none"; // Hide timer
+        timerEl.style.display = "none";
         return;
       }
 
       setupDiv.style.display = "none";
-      timerEl.style.display = "block"; // Show timer
-      questionEl.style.display = "flex"; // Use flex for vertical centering
+      timerEl.style.display = "block";
+      questionEl.style.display = "flex";
       optionsEl.style.display = "flex";
       scoreEl.style.display = "block";
-      messageBox.style.display = "none"; // Hide any previous messages
+      messageBox.style.display = "none";
 
       currentQuestionIndex = 0;
       score = 0;
@@ -318,17 +369,16 @@
     }
 
     function showQuestion() {
-      // Clear any previous timer
       clearInterval(timerInterval);
 
       if (currentQuestionIndex >= selectedQuestions.length) {
-          showResult(); // No more questions
-          return;
+        showResult();
+        return;
       }
 
       const current = selectedQuestions[currentQuestionIndex];
       questionEl.textContent = current.question;
-      optionsEl.innerHTML = ""; // Clear previous options
+      optionsEl.innerHTML = "";
 
       current.options.forEach(option => {
         const btn = document.createElement("button");
@@ -340,60 +390,56 @@
 
       scoreEl.textContent = `Question ${currentQuestionIndex + 1} of ${selectedQuestions.length}`;
 
-      // Start the timer for the new question
+      // Start timer
       timeLeft = timePerQuestion;
       timerEl.textContent = `Time: ${timeLeft}s`;
       timerInterval = setInterval(() => {
         timeLeft--;
         timerEl.textContent = `Time: ${timeLeft}s`;
 
-        if (timeLeft <= 5) { // Change timer color to red when less than 5 seconds
-            timerEl.style.color = '#ff416c';
+        if (timeLeft <= 5) {
+          timerEl.style.color = '#ff416c';
         } else {
-            timerEl.style.color = '#f1c40f'; // Reset to gold
+          timerEl.style.color = '#f1c40f';
         }
 
         if (timeLeft <= 0) {
           clearInterval(timerInterval);
-          playTimerEndSound();
+          playSound(timerEndSound);
           showMessage("Time's up for this question!", "error");
-          selectOption(null); // Pass null to indicate time ran out
+          selectOption(null);
         }
       }, 1000);
     }
 
     function selectOption(selected) {
-      // Clear the timer immediately when an option is selected or time runs out
       clearInterval(timerInterval);
 
       const correctAnswer = selectedQuestions[currentQuestionIndex].answer;
-      // Disable all option buttons to prevent multiple clicks
       Array.from(optionsEl.children).forEach(button => {
-        button.disabled = true; // Disable all buttons
-        button.style.pointerEvents = 'none'; // Prevent pointer events
+        button.disabled = true;
+        button.style.pointerEvents = 'none';
         if (button.textContent === correctAnswer) {
-          button.classList.add('correct'); // Green for correct answer
+          button.classList.add('correct');
         } else if (selected !== null && button.textContent === selected) {
-          button.classList.add('incorrect'); // Red for wrong answer (if user clicked)
+          button.classList.add('incorrect');
         }
       });
 
       if (selected === correctAnswer) {
         score++;
-        correctSound.play();
-      } else if (selected !== null) { // Only play wrong sound if user selected an option and it was wrong
-        wrongSound.play();
-      } else { // Time ran out, no selection
-        wrongSound.play(); // Play wrong sound for timeout
+        playSound(correctSound);
+      } else if (selected !== null) {
+        playSound(wrongSound);
+      } else {
+        playSound(wrongSound);
       }
 
       currentQuestionIndex++;
-      // Delay before showing the next question to allow user to see feedback
-      setTimeout(showQuestion, 1500); // Increased delay slightly for better visual feedback
+      setTimeout(showQuestion, 1500);
     }
 
     function showResult() {
-      // Ensure timer is stopped if quiz ends abruptly
       clearInterval(timerInterval);
 
       const quizBox = document.getElementById("quiz");
@@ -402,10 +448,27 @@
         <div class="score">You scored ${score} out of ${selectedQuestions.length}!</div>
         <button class="restart" onclick="location.reload()">🔁 Play Again!</button>
       `;
-      timerEl.style.display = "none"; // Hide timer
-      messageBox.style.display = "none"; // Hide message box
+      timerEl.style.display = "none";
+      messageBox.style.display = "none";
     }
+    
+    // Play a silent sound to unlock audio on user interaction
+    document.addEventListener('click', function unlockAudio() {
+      try {
+        // Play and immediately pause a silent sound
+        const silentSound = new Audio("data:audio/mp3;base64,SUQzBAAAAAABEVRYWFgAAAAtAAADY29tbWVudABCaWdTb3VuZEJhbmsuY29tIC8gTGFTb25vdGhlcXVlLm9yZwBURU5DAAAAHQAAA1N3aXRjaCBQbHVzIMKpIE5DSCBTb2Z0d2FyZQBUSVQyAAAABgAAAzIyMzUAVFNTRQAAAA8AAANMYXZmNTcuODMuMTAwAAAAAAAAAAAAAAD/80DEAAAAA0gAAAAATEFNRTMuMTAwVVVVVVVVVVVVVUxBTUUzLjEwMFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/zQsRbAAADSAAAAABVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/zQMSkAAADSAAAAABVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV");
+        silentSound.volume = 0;
+        silentSound.play().then(() => {
+          silentSound.pause();
+        }).catch(error => {
+          console.log("Audio unlock failed:", error);
+        });
+      } catch (error) {
+        console.log("Audio unlock error:", error);
+      }
+      // Remove the event listener after the first interaction
+      document.removeEventListener('click', unlockAudio);
+    }, { once: true });
   </script>
 </body>
 </html>
-
